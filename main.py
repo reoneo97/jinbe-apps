@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import re
 from datetime import datetime
-
+import io
 if 'output' not in st.session_state:
     st.session_state['output'] = None
-
+    st.session_state["output2"] = None
 
 
 st.set_page_config(
@@ -50,37 +50,85 @@ def process_excel_file(file):
     convert_df = pd.concat(slcs)
     return convert_df
 
+def process_excel_file_label_inputs(files):
+    dfs = []
+    
+    for file in files:
+
+        df = pd.read_excel(file)
+        title = df.columns[0]
+
+        date = title.split("_")[1].split(" ")[0]
+        store_no = title.split(":")[-1].split('(')[-1].split(')')[0]
+
+        df = pd.read_excel(file, header=3)
+        df['Date'] = date
+        df['Store No'] = store_no
+        dfs.append(df)
+    all_df = pd.concat(dfs)
+    return all_df
 
 def main():
     # st.image('./images.jpeg')
-    st.markdown('## Data Extract Reports')
-    st.markdown('This page contains some tools for data processing')
+    tabs = st.tabs(['Data Extract Reports', 'Label Model Inputs'])
+    with tabs[0]:
+        st.markdown('## Data Extract Reports')
+        st.markdown('This page contains some tools for data processing')
 
-    excel_files = st.file_uploader('Upload Excel Files Here:', accept_multiple_files=True)
-    run = st.button('Run Script 🐳')
-    if run:
-        if excel_files:
-            with st.spinner('Running'):
-                all_data = []
-                for file in excel_files:
-                    df = process_excel_file(file)
-                    all_data.append(df)
-                all_df = pd.concat(all_data)
-                st.session_state['output'] = all_df
-        else:
-            st.error('No Files have been uploaded')
-    if st.session_state['output'] is not None:
-        output_csv = st.session_state['output'].to_csv()
-        st.markdown('Preview')
-        st.dataframe(st.session_state['output'])
-        fn = get_time()  +"_korea_agg.csv"
-        # st.download_button(
-        #     'Download Output',
-        #     data=output_csv,
-        #     file_name=fn,
-        #     mime='text/csv'
-        # )
+        excel_files = st.file_uploader('Upload Excel Files Here:', accept_multiple_files=True)
+        run = st.button('Run Script 🐳')
+        if run:
+            if excel_files:
+                with st.spinner('Running'):
+                    all_data = []
+                    for file in excel_files:
+                        df = process_excel_file(file)
+                        all_data.append(df)
+                    all_df = pd.concat(all_data)
+                    st.session_state['output'] = all_df
+            else:
+                st.error('No Files have been uploaded')
+        if st.session_state['output'] is not None:
+            output_csv = st.session_state['output'].to_csv()
+            st.markdown('Preview')
+            st.dataframe(st.session_state['output'])
+            fn = get_time()  +"_korea_agg.csv"
 
+    with tabs[1]:
+        st.markdown('## Label Model Inputs')
+        st.markdown('This page contains tools to concatenate files and append the store # and date behind')
+        excel_files = st.file_uploader(
+            "Upload Excel Files Here:", accept_multiple_files=True,
+            key='label_files'
+        )
+        run = st.button('Run Script 🐳',key='run2')
+        if run:
+            if excel_files:
+                with st.spinner('Running'):
+
+                    output = process_excel_file_label_inputs(excel_files)
+                    st.session_state['output2'] = output
+            else:
+                st.error('No Files have been uploaded')
+        if st.session_state['output2'] is not None:
+            # output_csv = st.session_state['output'].to_csv()
+            st.markdown('Row Count Preview')
+            output_df = st.session_state['output2']
+            st.dataframe(
+                output_df.groupby(["Store No", "Date"]).count()["Unnamed: 0"].unstack()
+            )
+            st.dataframe(output_df)
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                output_df.to_excel(writer,index=False)
+                writer.save()
+
+                st.download_button(
+                    label='Download Result',
+                    data=buffer,
+                    file_name=get_time()  +"_korea_label_file.xlsx",
+                    mime="application/vnd.ms-excel"
+                )
 
 if __name__ == "__main__":
     main()
