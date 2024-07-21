@@ -21,8 +21,11 @@ def extract_info_from_title(title):
     date_range = pd.date_range(sd, ed)
     store_no_pattern = r'\(\d{8}\)'
     store_no = re.search(store_no_pattern, title)
+
     if not store_no:
-        print('NO STORE NUMBER FOUND')
+        st.error(f'Found issue with processing {title}')
+        return date_range, 'No Store Number!'
+
     store_no = int(store_no.group()[1:-1])
     return date_range, store_no
 
@@ -82,8 +85,11 @@ def main():
                 with st.spinner('Running'):
                     all_data = []
                     for file in excel_files:
-                        df = process_excel_file(file)
-                        all_data.append(df)
+                        try:
+                            df = process_excel_file(file)
+                            all_data.append(df)
+                        except:
+                            st.error(f'Issues Processing {file}')
                     all_df = pd.concat(all_data)
                     st.session_state['output'] = all_df
             else:
