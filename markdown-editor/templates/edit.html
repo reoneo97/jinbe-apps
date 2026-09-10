@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ name }} – Markdown Notes{% endblock %}
+{% block body %}
+<header class="topbar">
+    <h1><a class="plain" href="/">Markdown Notes</a> / {{ name }}</h1>
+    <nav>
+        <span id="save-status" class="muted">Saved</span>
+        <a href="/notes/{{ name }}/raw">Download</a>
+        <a href="/logout">Log out</a>
+    </nav>
+</header>
+
+<main class="editor-container">
+    <textarea id="editor" spellcheck="false">{{ content }}</textarea>
+    <div id="preview" class="preview"></div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    window.NOTE_NAME = {{ name | tojson }};
+</script>
+<script src="/static/editor.js"></script>
+{% endblock %}

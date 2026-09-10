@@ -1,0 +1,12 @@
+# Local / LAN deployment: exposes the app directly on port 8000 (plain HTTP).
+# Good for running on your local server behind your own network/firewall.
+# For internet-facing deployment, use docker-compose.cloud.yml instead.
+services:
+  markdown-editor:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data

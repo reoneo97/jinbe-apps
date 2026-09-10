@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Notes – Markdown Notes{% endblock %}
+{% block body %}
+<header class="topbar">
+    <h1>Markdown Notes</h1>
+    <nav>
+        <span class="muted">{{ user }}</span>
+        <a href="/logout">Log out</a>
+    </nav>
+</header>
+
+<main class="container">
+    <form class="new-note" method="post" action="/notes">
+        <input type="text" name="name" placeholder="New note title…" required maxlength="120">
+        <button type="submit">+ New note</button>
+    </form>
+
+    {% if notes %}
+    <ul class="note-list">
+        {% for note in notes %}
+        <li class="note-row">
+            <a class="note-title" href="/notes/{{ note.name }}/edit">{{ note.name }}</a>
+            <span class="muted note-meta">{{ note.size }} bytes</span>
+            <form method="post" action="/notes/{{ note.name }}/delete"
+                  onsubmit="return confirm('Delete “{{ note.name }}”? This cannot be undone.');">
+                <button class="danger" type="submit">Delete</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">No notes yet. Create your first one above.</p>
+    {% endif %}
+</main>
+{% endblock %}

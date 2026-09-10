@@ -1,0 +1,36 @@
+# Cloud deployment: Caddy terminates TLS (automatic Let's Encrypt certificate)
+# and reverse-proxies to the app, which is not exposed directly.
+# Requires a domain name pointed at this host's public IP, and ports 80/443 open.
+#
+# Usage:
+#   DOMAIN=notes.example.com docker compose -f docker-compose.cloud.yml up -d --build
+services:
+  markdown-editor:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - SESSION_HTTPS_ONLY=true
+    volumes:
+      - ./data:/data
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - markdown-editor
+
+volumes:
+  caddy_data:
+  caddy_config:
