@@ -1,26 +1,47 @@
 # Markdown Notes
 
-A tiny self-hosted markdown note editor: a note list, a split-pane
-editor with live preview, and single-tenant login. There's exactly one
+A tiny self-hosted markdown note editor: a note list, a Typora-style
+editor with Edit / Split / Preview modes, full GFM markdown (tables,
+task lists, strikethrough), LaTeX math, syntax-highlighted code blocks,
+paste-to-upload images, and single-tenant login. There's exactly one
 account, configured via environment variables — no signup flow, no
 user database.
 
 Notes are stored as plain `.md` files on disk, so they're easy to back
-up, sync, or edit with other tools if you ever want to.
+up, sync, or edit with other tools (Typora included) if you ever want to.
 
 ## How it works
 
 - **FastAPI** app (`main.py`) serves server-rendered pages (Jinja2)
-  plus one JSON endpoint for saving.
+  plus JSON endpoints for saving notes and uploading pasted images.
 - **Auth**: a signed session cookie (`itsdangerous`/Starlette
   `SessionMiddleware`) set after checking the submitted username/password
   against `AUTH_USERNAME` / `AUTH_PASSWORD_HASH` (bcrypt). A small
   in-memory guard locks out an IP for 15 minutes after 5 failed logins.
-- **Editor**: a `<textarea>` + [marked.js](https://marked.js.org/) for
-  live preview, autosaving ~800ms after you stop typing (or `Ctrl/Cmd+S`).
+  Every note and every uploaded image is served through an authenticated
+  route — nothing is public.
+- **Editor**: a `<textarea>` with three view modes — **Edit** (source
+  only), **Split** (source + live preview, the default), and **Preview**
+  (rendered only, full width, Typora-like typography) — toggled from the
+  toolbar and remembered per browser. Autosaves ~800ms after you stop
+  typing, or immediately on `Ctrl/Cmd+S`.
+- **Markdown rendering**: [marked](https://marked.js.org/) with GFM
+  (tables, task lists, strikethrough), [KaTeX](https://katex.org/) for
+  `$inline$` and `$$block$$` LaTeX math, and
+  [highlight.js](https://highlightjs.org/) for fenced code blocks. All
+  three are bundled into one vendored script
+  (`static/vendor/editor-bundle.js`) — no CDN calls at runtime, so the
+  app works even on a server with no outbound internet. See
+  `frontend/README.md` if you ever need to rebuild it.
+- **Pasting images**: paste an image (e.g. a screenshot) directly into
+  the editor. It uploads to `<NOTES_DIR>/assets/<random-id>.<ext>` and
+  inserts `![](assets/<random-id>.<ext>)` at the cursor — a path
+  relative to the note file, so it still resolves if you open the same
+  folder in another markdown editor.
 - **Storage**: every note is `<NOTES_DIR>/<name>.md`. Filenames are
   restricted to letters, numbers, spaces, `-` and `_` to prevent path
-  traversal.
+  traversal; the same protection applies to the route that serves
+  images and note files back to the browser.
 
 ## Local setup (no Docker)
 
@@ -129,20 +150,28 @@ reaches the app over HTTPS, so the session cookie is marked `Secure`.
 - Put it behind HTTPS before exposing it to the internet (both
   deployment options above do this) and set `SESSION_HTTPS_ONLY=true`.
 - Back up the `data/` directory (or wherever `NOTES_DIR` points) —
-  it's the only copy of your notes.
+  it's the only copy of your notes and pasted images.
 - The login endpoint locks out an IP after 5 failed attempts for 15
   minutes; this is in-memory and resets on restart, which is fine for
   a single-instance deployment.
+- Pasted images are capped at 15MB and must be PNG, JPEG, GIF or WebP
+  (checked by the browser-reported content type, not by decoding the
+  file — fine for a trusted single-user tool, not a substitute for
+  antivirus scanning if you ever open this up further).
 
 ## Project layout
 
 ```
 markdown-editor/
-├── main.py                    # FastAPI app: auth, routes, note storage
+├── main.py                    # FastAPI app: auth, routes, note + image storage
 ├── scripts/hash_password.py   # generates AUTH_PASSWORD_HASH
 ├── templates/                 # login / note list / editor pages
-├── static/                    # CSS + editor.js (autosave, preview)
-├── data/                      # notes live here (gitignored)
+├── static/
+│   ├── style.css               # Typora-like typography, mode toggle
+│   ├── editor.js                # modes, autosave, paste-to-upload
+│   └── vendor/                  # prebuilt: marked + KaTeX + highlight.js
+├── frontend/                   # dev-time source for static/vendor/ (see its README)
+├── data/                       # notes + data/assets/ pasted images (gitignored)
 ├── Dockerfile
 ├── docker-compose.yml         # local/LAN, plain HTTP on :8000
 ├── docker-compose.cloud.yml   # cloud, Caddy + automatic HTTPS

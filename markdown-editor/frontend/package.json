@@ -1,0 +1,20 @@
+{
+  "name": "markdown-editor-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Build step for the vendored client-side markdown rendering bundle (marked + KaTeX + highlight.js). Not used at runtime by the Python app — output is committed to ../static/vendor/.",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --minify --format=iife --target=es2019 --outfile=../static/vendor/editor-bundle.js && cp node_modules/katex/dist/katex.min.css ../static/vendor/katex/katex.min.css && cp -r node_modules/katex/dist/fonts ../static/vendor/katex/"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "highlight.js": "11.10.0",
+    "katex": "0.18.7",
+    "marked": "12.0.2",
+    "marked-highlight": "2.2.1",
+    "marked-katex-extension": "5.1.12"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0"
+  }
+}

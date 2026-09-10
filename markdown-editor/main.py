@@ -1,11 +1,12 @@
 import os
 import re
 import time
+import uuid
 import secrets
 from pathlib import Path
 from collections import defaultdict, deque
 
-from fastapi import FastAPI, Request, Form, HTTPException, Depends
+from fastapi import FastAPI, Request, Form, UploadFile, File, HTTPException, Depends
 from fastapi.responses import RedirectResponse, PlainTextResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -34,6 +35,8 @@ if not SECRET_KEY:
     )
 
 NOTES_DIR.mkdir(parents=True, exist_ok=True)
+ASSETS_DIR = NOTES_DIR / "assets"
+ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Markdown Notes")
 app.add_middleware(
@@ -111,6 +114,24 @@ def list_notes() -> list[dict]:
         notes.append({"name": path.stem, "modified": stat.st_mtime, "size": stat.st_size})
     notes.sort(key=lambda n: n["modified"], reverse=True)
     return notes
+
+
+def resolve_within_notes_dir(relative_path: str) -> Path:
+    notes_root = NOTES_DIR.resolve()
+    candidate = (notes_root / relative_path).resolve()
+    if notes_root != candidate and notes_root not in candidate.parents:
+        raise HTTPException(status_code=400, detail="Invalid path.")
+    return candidate
+
+
+# --- Pasted images ---
+IMAGE_EXTENSION_BY_CONTENT_TYPE = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/gif": "gif",
+    "image/webp": "webp",
+}
+MAX_IMAGE_BYTES = 15 * 1024 * 1024
 
 
 # --- Routes: auth ---
@@ -200,6 +221,31 @@ def delete_note(request: Request, name: str, user: str = Depends(require_login))
     if path.exists():
         path.unlink()
     return RedirectResponse("/", status_code=303)
+
+
+@app.post("/api/images")
+async def upload_image(request: Request, file: UploadFile = File(...), user: str = Depends(require_login)):
+    extension = IMAGE_EXTENSION_BY_CONTENT_TYPE.get(file.content_type)
+    if not extension:
+        raise HTTPException(status_code=400, detail="Only PNG, JPEG, GIF or WebP images are supported.")
+
+    data = await file.read(MAX_IMAGE_BYTES + 1)
+    if len(data) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="Image is larger than 15MB.")
+
+    filename = f"{uuid.uuid4().hex}.{extension}"
+    (ASSETS_DIR / filename).write_bytes(data)
+    # Relative to NOTES_DIR, so the markdown source stays portable if the
+    # data folder is opened directly in another editor.
+    return {"path": f"assets/{filename}"}
+
+
+@app.get("/files/{path:path}")
+def serve_file(request: Request, path: str, user: str = Depends(require_login)):
+    file_path = resolve_within_notes_dir(path)
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found.")
+    return FileResponse(file_path)
 
 
 @app.get("/notes/{name}/raw")
