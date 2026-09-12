@@ -139,7 +139,7 @@ MAX_IMAGE_BYTES = 15 * 1024 * 1024
 def login_form(request: Request):
     if request.session.get("user"):
         return RedirectResponse("/", status_code=303)
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request, "login.html", {"error": None})
 
 
 @app.post("/login")
@@ -147,8 +147,9 @@ def login_submit(request: Request, username: str = Form(...), password: str = Fo
     key = _client_key(request)
     if _is_locked_out(key):
         return templates.TemplateResponse(
+            request,
             "login.html",
-            {"request": request, "error": "Too many failed attempts. Try again in a few minutes."},
+            {"error": "Too many failed attempts. Try again in a few minutes."},
             status_code=429,
         )
 
@@ -160,8 +161,9 @@ def login_submit(request: Request, username: str = Form(...), password: str = Fo
     if not (valid_user and valid_pass):
         _record_failure(key)
         return templates.TemplateResponse(
+            request,
             "login.html",
-            {"request": request, "error": "Invalid username or password."},
+            {"error": "Invalid username or password."},
             status_code=401,
         )
 
@@ -181,7 +183,7 @@ def logout(request: Request):
 @app.get("/")
 def index(request: Request, user: str = Depends(require_login)):
     return templates.TemplateResponse(
-        "index.html", {"request": request, "notes": list_notes(), "user": user}
+        request, "index.html", {"notes": list_notes(), "user": user}
     )
 
 
@@ -200,7 +202,7 @@ def edit_note(request: Request, name: str, user: str = Depends(require_login)):
         raise HTTPException(status_code=404, detail="Note not found.")
     content = path.read_text(encoding="utf-8")
     return templates.TemplateResponse(
-        "edit.html", {"request": request, "name": path.stem, "content": content}
+        request, "edit.html", {"name": path.stem, "content": content}
     )
 
 

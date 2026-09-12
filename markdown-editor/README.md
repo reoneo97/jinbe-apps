@@ -68,6 +68,24 @@ Visit `http://localhost:8000`. The app loads `.env` itself (via
 `python-dotenv`), so you don't need to `source` it — that matters here
 because bcrypt hashes contain `$`, which a shell will try to expand.
 
+## Running tests
+
+The test suite (`tests/`) covers auth (login, lockout, session/logout),
+note CRUD, path-traversal protection, and image upload + protected
+serving — using FastAPI's `TestClient` against the real app with an
+isolated temp directory standing in for `NOTES_DIR`, so it never
+touches your real notes.
+
+```bash
+cd markdown-editor
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+pytest -v
+```
+
+`requirements-dev.txt` pulls in `requirements.txt` plus `pytest` and
+`httpx` (only needed for tests, not for running the app).
+
 ## Run with Docker (recommended for your local server)
 
 ```bash
@@ -164,6 +182,7 @@ reaches the app over HTTPS, so the session cookie is marked `Secure`.
 ```
 markdown-editor/
 ├── main.py                    # FastAPI app: auth, routes, note + image storage
+├── tests/                     # pytest suite (auth, CRUD, traversal, uploads)
 ├── scripts/hash_password.py   # generates AUTH_PASSWORD_HASH
 ├── templates/                 # login / note list / editor pages
 ├── static/
