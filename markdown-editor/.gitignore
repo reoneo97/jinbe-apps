@@ -1,0 +1,8 @@
+.env
+data/*.md
+data/assets/*
+!data/assets/.gitkeep
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/

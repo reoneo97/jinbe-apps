@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Sign in – Markdown Notes{% endblock %}
+{% block body %}
+<div class="center-screen">
+    <form class="card login-card" method="post" action="/login">
+        <h1>Markdown Notes</h1>
+        {% if error %}
+        <p class="error">{{ error }}</p>
+        {% endif %}
+        <label>
+            Username
+            <input type="text" name="username" autocomplete="username" required autofocus>
+        </label>
+        <label>
+            Password
+            <input type="password" name="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit">Sign in</button>
+    </form>
+</div>
+{% endblock %}

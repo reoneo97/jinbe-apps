@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ name }} – Markdown Notes{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
+{% endblock %}
+{% block body %}
+<header class="topbar">
+    <h1><a class="plain" href="/">Markdown Notes</a> / {{ name }}</h1>
+    <nav>
+        <div class="mode-toggle" role="tablist" aria-label="View mode">
+            <button type="button" data-mode="edit" role="tab">Edit</button>
+            <button type="button" data-mode="split" role="tab">Split</button>
+            <button type="button" data-mode="preview" role="tab">Preview</button>
+        </div>
+        <span id="save-status" class="muted">Saved</span>
+        <a href="/notes/{{ name }}/raw">Download</a>
+        <a href="/logout">Log out</a>
+    </nav>
+</header>
+
+<main id="editor-container" class="editor-container mode-split">
+    <textarea id="editor" spellcheck="false">{{ content }}</textarea>
+    <div id="preview" class="preview typora"></div>
+</main>
+
+<script>
+    window.NOTE_NAME = {{ name | tojson }};
+</script>
+<script src="/static/vendor/editor-bundle.js"></script>
+<script src="/static/editor.js"></script>
+{% endblock %}
